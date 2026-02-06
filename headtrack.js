@@ -14,10 +14,55 @@
     }));
   }
 
+  async function ensureCameraStream() {
+    // Pide cámara con constraints compatibles
+    const constraints = {
+      audio: false,
+      video: {
+        facingMode: "user",
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      }
+    };
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = stream;
+
+      // Espera a que realmente haya video listo
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => resolve(true);
+      });
+
+      await video.play();
+      return true;
+    } catch (err) {
+      // Mensajes típicos:
+      // NotAllowedError -> permiso
+      // NotReadableError -> cámara ocupada / no inicia
+      // OverconstrainedError -> constraints incompatibles
+      const name = err?.name || "CameraError";
+      const msg = err?.message || String(err);
+
+      alert(
+        `Camera error: ${name}\n\n${msg}\n\n` +
+        `Tips:\n- Cierra apps/pestañas que usen cámara (Teams/Zoom/Meet).\n` +
+        `- Revisa permisos: candado > Camera > Allow.\n` +
+        `- Abre el link directo en Chrome (no dentro de otra app).\n`
+      );
+
+      throw err;
+    }
+  }
+
   async function start() {
     if (state.started) return;
     state.started = true;
 
+    // 1) Asegurar stream primero (más estable)
+    await ensureCameraStream();
+
+    // 2) Inicializar FaceMesh
     const faceMesh = new FaceMesh({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
     });
@@ -33,43 +78,36 @@
       if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
 
       const lm = results.multiFaceLandmarks[0];
-
-      // Nose tip landmark
       const nose = lm[1];
       if (!nose) return;
 
-      // ✅ FIX: invert mirror so RIGHT head movement = RIGHT screen movement
+      // ✅ FIX espejo: RIGHT de tu cabeza = RIGHT en pantalla
       const x = 1 - nose.x;
 
       const xNorm = clamp(x, 0, 1);
       const center = 0.5;
       const delta = xNorm - center;
 
-      const threshold = 0.06; // sensitivity
+      const threshold = 0.06;
       let side = "CENTER";
       if (delta > threshold) side = "RIGHT";
       else if (delta < -threshold) side = "LEFT";
 
-      // confidence: further from center = more confident
       const confidence = clamp(Math.abs(delta) / 0.20, 0, 1);
 
       if (side !== "CENTER") state.lastSide = side;
-
-      // If centered, keep lastSide for stability
       const stableSide = side === "CENTER" ? state.lastSide : side;
 
       emit(stableSide, confidence, xNorm);
     });
 
-    const cam = new Camera(video, {
-      onFrame: async () => {
-        await faceMesh.send({ image: video });
-      },
-      width: 640,
-      height: 480
-    });
-
-    await cam.start();
+    // 3) Loop de frames (sin camera_utils) — usamos el stream ya activo
+    async function loop() {
+      if (!state.started) return;
+      await faceMesh.send({ image: video });
+      requestAnimationFrame(loop);
+    }
+    loop();
   }
 
   window.HeadTrack = { start };
