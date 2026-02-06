@@ -15,9 +15,8 @@ let lock = false;
 
 function arenaX(pct) {
   const w = arena.clientWidth;
-  const objW = 70; // player width
-  const x = Math.max(0, Math.min(w - objW, Math.floor(pct * (w - objW))));
-  return x;
+  const objW = 70;
+  return Math.max(0, Math.min(w - objW, Math.floor(pct * (w - objW))));
 }
 
 function setBallPosition(side) {
@@ -33,7 +32,6 @@ function newRound() {
 
   setBallPosition(targetSide);
 
-  // little "ping" animation
   ball.style.transform = "scale(1.08)";
   setTimeout(() => (ball.style.transform = "scale(1)"), 120);
 
@@ -62,11 +60,10 @@ startBtn.addEventListener("click", async () => {
   scoreEl.textContent = "0";
   running = true;
 
-  await window.HeadTrack.start(); // cámara + tracking
+  // 👇 esto es lo que prende la cámara
+  await window.HeadTrack.start();
 
-  // start with player centered
   player.style.left = `${arenaX(0.44)}px`;
-
   newRound();
 });
 
@@ -78,17 +75,14 @@ restartBtn?.addEventListener("click", () => {
   newRound();
 });
 
-// Head tracking events: { side, confidence, xNorm }
 window.addEventListener("headmove", (e) => {
   if (!running) return;
   if (!e.detail) return;
 
   const { side, confidence, xNorm } = e.detail;
 
-  // move player smoothly by xNorm (0..1)
   player.style.left = `${arenaX(xNorm)}px`;
 
-  // scoring
   if (lock) return;
   if (confidence < 0.6) return;
 
