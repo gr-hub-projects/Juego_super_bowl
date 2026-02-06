@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Touchdown Head Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Touchdown Head Game</h1>
+      <p class="sub">Move your head LEFT / RIGHT to match the ball.</p>
+    </header>
+
+    <div class="hud">
+      <div>Score: <span id="score">0</span> / 7</div>
+      <div>Direction: <span id="dir">-</span></div>
+      <button id="startBtn">Start</button>
+    </div>
+
+    <div class="arena" id="arena">
+      <div class="ball" id="ball"></div>
+      <div class="player" id="player"></div>
+    </div>
+
+    <div class="win hidden" id="win">
+      <h2>TOUCHDOWN!</h2>
+      <p>You win this coupon</p>
+      <img src="assets/qr.png" alt="Coupon QR" />
+      <button id="restartBtn">Play again</button>
+    </div>
+
+    <!-- Cámara (oculta) -->
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="debug" class="hidden"></canvas>
+  </div>
+
+  <!-- MediaPipe (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+  <script src="headtrack.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
